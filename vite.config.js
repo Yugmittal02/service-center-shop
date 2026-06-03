@@ -14,20 +14,23 @@ export default defineConfig({
         enabled: true
       },
       manifest: {
-        name: 'Saini Refrigeration Admin',
-        short_name: 'Saini Admin',
-        description: 'Manage bookings and site content for Saini Refrigeration.',
+        name: 'Saini HomeCare Admin',
+        short_name: 'HomeCare Admin',
+        description: 'Admin panel for Saini HomeCare — manage bookings, services, banners and more.',
         theme_color: '#0f766e',
         background_color: '#ffffff',
         display: 'standalone',
+        start_url: '/admin',
+        scope: '/',
+        orientation: 'portrait',
         icons: [
           {
-            src: '/images/pwa_icon.png',
+            src: '/images/logo.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: '/images/pwa_icon.png',
+            src: '/images/logo.png',
             sizes: '512x512',
             type: 'image/png'
           }

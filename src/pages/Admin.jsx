@@ -2,11 +2,59 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { toast } from 'react-toastify';
-import { LayoutDashboard, Settings, Image as ImageIcon, LogOut, Trash2, Plus, RefreshCw, Phone, Menu, X, Tag, IndianRupee, FileText, CheckCircle, Users, Search, Download, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, Settings, Image as ImageIcon, LogOut, Trash2, Plus, RefreshCw, Phone, Menu, X, Tag, IndianRupee, FileText, CheckCircle, Users, Search, Download, MessageCircle, Megaphone, Upload, Lock } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
+import { storage } from '../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+const ADMIN_PIN = '8619';
 
 export default function Admin() {
-  const { appData, updateSiteDetails, addService, updateService, deleteService, updateBookingStatus, addCoupon, toggleCouponStatus, deleteCoupon, deleteBooking, updateNotepad, addManualBooking, updateCommissionPercent } = useContext(AppContext);
+  // PIN Auth
+  const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem('adminAuth') === 'true');
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+
+  const handlePinSubmit = (e) => {
+    e.preventDefault();
+    if (pinInput === ADMIN_PIN) {
+      sessionStorage.setItem('adminAuth', 'true');
+      setIsAuthenticated(true);
+      toast.success('Welcome to Admin Panel!');
+    } else {
+      setPinError('Incorrect PIN. Try again.');
+      setPinInput('');
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('adminAuth');
+    setIsAuthenticated(false);
+    setPinInput('');
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 font-sans">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+          <div className="bg-brand-teal/10 p-4 rounded-full inline-block mb-4">
+            <Lock size={32} className="text-brand-teal" />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 mb-1">Saini HomeCare</h2>
+          <p className="text-gray-500 text-sm mb-6">Enter admin PIN to continue</p>
+          <form onSubmit={handlePinSubmit} className="space-y-4">
+            <input type="password" inputMode="numeric" maxLength={4} value={pinInput} onChange={e => { setPinInput(e.target.value); setPinError(''); }}
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-brand-teal outline-none text-center text-2xl font-black tracking-[0.5em] bg-gray-50"
+              placeholder="••••" autoFocus />
+            {pinError && <p className="text-red-500 text-xs font-bold">{pinError}</p>}
+            <button type="submit" className="w-full bg-brand-teal hover:bg-teal-700 text-white py-3 rounded-xl font-bold text-sm transition">Unlock Admin Panel</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  const { appData, updateSiteDetails, addService, updateService, deleteService, updateBookingStatus, addCoupon, toggleCouponStatus, deleteCoupon, deleteBooking, updateNotepad, addManualBooking, updateCommissionPercent, addBanner, updateBanner, deleteBanner } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('bookings');
   const [localSiteDetails, setLocalSiteDetails] = useState(appData.siteDetails || {});
   const [lastRefresh, setLastRefresh] = useState(new Date());
@@ -131,7 +179,7 @@ export default function Admin() {
           // Open WhatsApp - clean phone number
           const cleanPhone = user.phone.replace(/\D/g, '').replace(/^0+/, '');
           const phoneWithCode = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
-          const text = `Hello ${user.name},\n\nHere is the summary of your service on ${new Date(booking.date).toLocaleDateString()}:\n\nService: ${booking.service}\nAmount: ₹${booking.paymentReceived}\n\nPlease find the attached detailed invoice image.\n\nThank you for choosing Saini Refrigeration!`;
+          const text = `Hello ${user.name},\n\nHere is the summary of your service on ${new Date(booking.date).toLocaleDateString()}:\n\nService: ${booking.service}\nAmount: ₹${booking.paymentReceived}\n\nPlease find the attached detailed invoice image.\n\nThank you for choosing Saini HomeCare!`;
           const waLink = `https://wa.me/${phoneWithCode}?text=${encodeURIComponent(text)}`;
           window.open(waLink, '_blank');
           
@@ -321,6 +369,7 @@ export default function Admin() {
             { key: 'payments', icon: <IndianRupee size={18} />, label: 'Payments & Comm.' },
             { key: 'users', icon: <Users size={18} />, label: 'Customers' },
             { key: 'coupons', icon: <Tag size={18} />, label: 'Coupons' },
+            { key: 'banners', icon: <Megaphone size={18} />, label: 'Banners' },
             { key: 'notepad', icon: <FileText size={18} />, label: 'Notepad' },
             { key: 'services', icon: <ImageIcon size={18} />, label: 'Services' },
             { key: 'general', icon: <Settings size={18} />, label: 'General' },
@@ -340,10 +389,13 @@ export default function Admin() {
           <RefreshCw size={10} className="animate-spin" /> Auto-sync: {lastRefresh.toLocaleTimeString()}
         </div>
 
-        <div className="p-3 border-t border-gray-800">
-          <Link to="/" className="w-full flex justify-center items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-3 py-2.5 rounded-lg font-semibold text-sm transition">
-            <LogOut size={16} /> Back to Site
+        <div className="p-3 border-t border-gray-800 space-y-2">
+          <Link to="/" className="w-full flex justify-center items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-lg font-semibold text-sm transition">
+            <LogOut size={16} /> View Site
           </Link>
+          <button onClick={handleLogout} className="w-full flex justify-center items-center gap-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 px-3 py-2 rounded-lg font-semibold text-sm transition">
+            <Lock size={16} /> Logout
+          </button>
         </div>
       </div>
 
@@ -643,7 +695,90 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ========== GENERAL TAB ========== */}
+        {/* ========== BANNERS TAB ========== */}
+        {activeTab === 'banners' && (
+          <div>
+            <div className="mb-6">
+              <h3 className="text-2xl font-black text-gray-900 mb-1">Promo Banners</h3>
+              <p className="text-gray-500 text-sm">Manage homepage promotional banners. Supports URL and file upload.</p>
+            </div>
+
+            {/* Add Banner Form */}
+            <div className="bg-purple-50 p-5 rounded-xl border border-purple-100 mb-8">
+              <h4 className="text-base font-bold text-purple-700 mb-3 flex items-center gap-2"><Plus size={18} /> Add New Banner</h4>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const f = e.target;
+                const title = f.bannerTitle.value;
+                const link = f.bannerLink.value;
+                const urlInput = f.bannerUrl.value;
+                const fileInput = f.bannerFile.files[0];
+                
+                let imageUrl = urlInput;
+                if (fileInput && !urlInput) {
+                  try {
+                    toast.info('Uploading image...');
+                    const storageRef = ref(storage, `banners/${Date.now()}_${fileInput.name}`);
+                    await uploadBytes(storageRef, fileInput);
+                    imageUrl = await getDownloadURL(storageRef);
+                    toast.success('Image uploaded!');
+                  } catch (err) {
+                    console.error(err);
+                    toast.error('Upload failed. Check Firebase Storage rules.');
+                    return;
+                  }
+                }
+                if (!imageUrl) { toast.error('Please provide an image URL or upload a file.'); return; }
+                addBanner({ imageUrl, link, title });
+                f.reset();
+                toast.success('Banner added!');
+              }} className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input name="bannerTitle" type="text" placeholder="Banner title (optional)" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" />
+                  <input name="bannerLink" type="text" placeholder="Link URL (optional)" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" />
+                </div>
+                <input name="bannerUrl" type="text" placeholder="Image URL (paste link here)" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" />
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 flex items-center gap-2 px-3.5 py-2.5 rounded-lg border border-dashed border-gray-400 bg-white cursor-pointer hover:border-brand-teal transition text-sm text-gray-500">
+                    <Upload size={16} /> <span>Or upload image file</span>
+                    <input name="bannerFile" type="file" accept="image/*" className="hidden" />
+                  </label>
+                  <button type="submit" className="bg-brand-teal hover:bg-teal-700 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition whitespace-nowrap flex items-center gap-2"><Plus size={16} /> Add</button>
+                </div>
+              </form>
+            </div>
+
+            {/* Banner List */}
+            <div className="space-y-4">
+              {(appData.banners || []).length === 0 && (
+                <div className="text-center text-gray-400 font-semibold py-8">No banners yet. Add one above!</div>
+              )}
+              {(appData.banners || []).map(banner => (
+                <div key={banner.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="flex flex-col sm:flex-row">
+                    <img src={banner.imageUrl} alt={banner.title || 'Banner'} className="w-full sm:w-48 h-32 object-cover bg-gray-100 flex-shrink-0" />
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <p className="font-bold text-sm text-gray-900">{banner.title || 'Untitled Banner'}</p>
+                        {banner.link && <p className="text-xs text-gray-400 truncate mt-0.5">{banner.link}</p>}
+                      </div>
+                      <div className="flex items-center gap-2 mt-3">
+                        <button onClick={() => updateBanner({ ...banner, isActive: !banner.isActive })}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition ${banner.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {banner.isActive ? 'Active' : 'Inactive'}
+                        </button>
+                        <button onClick={() => { if(window.confirm('Delete this banner?')) { deleteBanner(banner.id); toast.success('Banner deleted!'); } }}
+                          className="px-3 py-1 rounded-lg text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 transition">
+                          <Trash2 size={14} className="inline" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {activeTab === 'general' && (
           <div className="max-w-3xl">
             <h3 className="text-2xl font-black text-gray-900 mb-6">General Details</h3>
@@ -728,45 +863,165 @@ export default function Admin() {
             </div>
 
             {/* Existing Services */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               {(appData.services || []).map(service => (
-                <div key={service.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col md:flex-row gap-5 items-start relative group">
+                <div key={service.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative group">
                   {/* Delete button */}
                   <button 
                     onClick={() => handleDeleteService(service.id, service.title)}
-                    className="absolute top-3 right-3 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 p-2 rounded-lg transition opacity-60 group-hover:opacity-100" 
+                    className="absolute top-3 right-3 z-10 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 p-2 rounded-lg transition opacity-60 group-hover:opacity-100" 
                     title="Delete Service"
                   >
                     <Trash2 size={16} />
                   </button>
 
-                  <div className="w-full md:w-1/4 flex-shrink-0">
-                    <img src={service.image} alt={service.title} className="w-full h-32 object-cover rounded-lg bg-gray-100 mb-2" />
-                    <input 
-                      type="text" value={service.image} 
-                      onChange={(e) => updateService({...service, image: e.target.value})}
-                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 focus:border-brand-teal outline-none" 
-                      placeholder="Image URL" 
-                    />
-                  </div>
-                  <div className="w-full md:w-3/4 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-600 mb-1">Title</label>
-                        <input type="text" value={service.title} onChange={(e) => updateService({...service, title: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-semibold" />
+                  <div className="p-5 flex flex-col md:flex-row gap-5 items-start">
+                    <div className="w-full md:w-1/4 flex-shrink-0">
+                      <img src={service.image} alt={service.title} className="w-full h-32 object-cover rounded-lg bg-gray-100 mb-2" onError={e => { e.target.src = '/images/hero_repair.png'; }} />
+                      <input 
+                        type="text" value={service.image} 
+                        onChange={(e) => updateService({...service, image: e.target.value})}
+                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 focus:border-brand-teal outline-none" 
+                        placeholder="Image URL" 
+                      />
+                    </div>
+                    <div className="w-full md:w-3/4 space-y-3">
+                      {/* Row 1: Title, Price, Base Price */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1">Title</label>
+                          <input type="text" value={service.title} onChange={(e) => updateService({...service, title: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-semibold" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1">Price Text</label>
+                          <input type="text" value={service.price} onChange={(e) => updateService({...service, price: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-semibold text-brand-orange" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1">Base ₹</label>
+                          <input type="number" value={service.basePrice || 0} onChange={(e) => updateService({...service, basePrice: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-semibold text-green-600" />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-600 mb-1">Price Text</label>
-                        <input type="text" value={service.price} onChange={(e) => updateService({...service, price: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-semibold text-brand-orange" />
+
+                      {/* Row 2: Rating, Review Count, Duration, Icon */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1">Rating ★</label>
+                          <input type="number" step="0.01" min="0" max="5" value={service.rating || ''} onChange={(e) => updateService({...service, rating: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" placeholder="4.76" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1">Reviews #</label>
+                          <input type="number" value={service.reviewCount || ''} onChange={(e) => updateService({...service, reviewCount: parseInt(e.target.value) || 0})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" placeholder="2700000" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1">Duration</label>
+                          <input type="text" value={service.duration || ''} onChange={(e) => updateService({...service, duration: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" placeholder="1 hr 30 mins" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 mb-1">Icon</label>
+                          <select value={service.icon || 'Wrench'} onChange={(e) => updateService({...service, icon: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm bg-white">
+                            <option value="Thermometer">❄️ Thermometer (AC)</option>
+                            <option value="ShieldCheck">🛡️ ShieldCheck (Fridge)</option>
+                            <option value="Settings">⚙️ Settings (Washing)</option>
+                            <option value="Zap">⚡ Zap (Electrical)</option>
+                            <option value="Wrench">🔧 Wrench (General)</option>
+                          </select>
+                        </div>
                       </div>
+
+                      {/* Description */}
                       <div>
-                        <label className="block text-xs font-bold text-gray-600 mb-1">Base ₹</label>
-                        <input type="number" value={service.basePrice || 0} onChange={(e) => updateService({...service, basePrice: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-semibold text-green-600" />
+                        <label className="block text-xs font-bold text-gray-600 mb-1">Description</label>
+                        <textarea value={service.description} onChange={(e) => updateService({...service, description: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm resize-none" rows="2"></textarea>
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-600 mb-1">Description</label>
-                      <textarea value={service.description} onChange={(e) => updateService({...service, description: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm resize-none" rows="2"></textarea>
+                  </div>
+
+                  {/* Includes Section */}
+                  <div className="border-t border-gray-100 px-5 py-4">
+                    <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">What's Included</label>
+                    <div className="space-y-2">
+                      {(service.includes || []).map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
+                          <input 
+                            type="text" 
+                            value={item} 
+                            onChange={(e) => {
+                              const newIncludes = [...(service.includes || [])];
+                              newIncludes[idx] = e.target.value;
+                              updateService({...service, includes: newIncludes});
+                            }}
+                            className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 focus:border-brand-teal outline-none text-sm"
+                          />
+                          <button 
+                            onClick={() => {
+                              const newIncludes = (service.includes || []).filter((_, i) => i !== idx);
+                              updateService({...service, includes: newIncludes});
+                            }}
+                            className="text-red-400 hover:text-red-600 p-1 transition"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        onClick={() => updateService({...service, includes: [...(service.includes || []), '']})}
+                        className="text-brand-teal hover:text-teal-700 text-xs font-bold flex items-center gap-1 transition"
+                      >
+                        <Plus size={14} /> Add Include Item
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Add-Ons Section */}
+                  <div className="border-t border-gray-100 px-5 py-4 bg-blue-50/30">
+                    <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">Add-Ons</label>
+                    <div className="space-y-2">
+                      {(service.addOns || []).map((addon, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="text-brand-blue font-bold text-sm flex-shrink-0">+</span>
+                          <input 
+                            type="text" 
+                            value={addon.name} 
+                            onChange={(e) => {
+                              const newAddOns = [...(service.addOns || [])];
+                              newAddOns[idx] = { ...newAddOns[idx], name: e.target.value };
+                              updateService({...service, addOns: newAddOns});
+                            }}
+                            className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 focus:border-brand-teal outline-none text-sm"
+                            placeholder="Add-on name"
+                          />
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500 text-sm">₹</span>
+                            <input 
+                              type="number" 
+                              value={addon.price} 
+                              onChange={(e) => {
+                                const newAddOns = [...(service.addOns || [])];
+                                newAddOns[idx] = { ...newAddOns[idx], price: parseFloat(e.target.value) || 0 };
+                                updateService({...service, addOns: newAddOns});
+                              }}
+                              className="w-20 px-2 py-1.5 rounded-lg border border-gray-200 focus:border-brand-teal outline-none text-sm font-bold text-right"
+                              placeholder="199"
+                            />
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const newAddOns = (service.addOns || []).filter((_, i) => i !== idx);
+                              updateService({...service, addOns: newAddOns});
+                            }}
+                            className="text-red-400 hover:text-red-600 p-1 transition"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        onClick={() => updateService({...service, addOns: [...(service.addOns || []), { name: '', price: 0 }]})}
+                        className="text-brand-blue hover:text-blue-800 text-xs font-bold flex items-center gap-1 transition"
+                      >
+                        <Plus size={14} /> Add New Add-On
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -884,8 +1139,8 @@ export default function Admin() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', borderBottom: '3px solid #0d9488', paddingBottom: '24px' }}>
               <div>
-                <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0d9488', marginBottom: '4px', letterSpacing: '-0.5px' }}>SAINI REFRIGERATION</h1>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: '#6b7280', letterSpacing: '3px', textTransform: 'uppercase' }}>& Electricals</p>
+                <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0d9488', marginBottom: '4px', letterSpacing: '-0.5px' }}>SAINI HOMECARE</h1>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: '#6b7280', letterSpacing: '3px', textTransform: 'uppercase' }}>Repair • Service • Install • Care</p>
                 <div style={{ marginTop: '16px', fontSize: '12px', color: '#9ca3af' }}>
                   <p style={{ marginBottom: '4px' }}>📞 {localSiteDetails.phone1 || '8209640447'}, {localSiteDetails.phone2 || '9782311637'}</p>
                   <p>📍 {localSiteDetails.address || 'Bapu Nagar, Bharatpur, Rajasthan'}</p>
@@ -973,7 +1228,7 @@ export default function Admin() {
 
             {/* Footer */}
             <div style={{ textAlign: 'center', paddingTop: '24px', borderTop: '1px solid #e5e7eb', fontSize: '12px', color: '#9ca3af' }}>
-              <p style={{ fontWeight: 700, color: '#6b7280', marginBottom: '4px' }}>Thank you for choosing Saini Refrigeration & Electricals!</p>
+              <p style={{ fontWeight: 700, color: '#6b7280', marginBottom: '4px' }}>Thank you for choosing Saini HomeCare!</p>
               <p>For any queries, contact us at {localSiteDetails.phone1 || '8209640447'}</p>
               <p style={{ marginTop: '12px', fontStyle: 'italic' }}>This is a system-generated invoice.</p>
             </div>

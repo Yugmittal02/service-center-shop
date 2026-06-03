@@ -11,7 +11,7 @@ export const AppProvider = ({ children }) => {
       phone2: '9782311637',
       address: 'Bapu Nagar, Vivek Vihar Colony, H.No. 186, Bharatpur, Rajasthan',
       timing: 'Everyday: 9:00 AM – 8:00 PM',
-      heroTitle: 'Expert Refrigeration & Electrical Services in Bharatpur',
+      heroTitle: 'Expert Home Repair & Service in Bharatpur',
       heroSubtitle: 'Reliable AC, fridge, washing machine, geyser and electrical repair services directly at your doorstep by experienced professionals.',
       heroImage: '/images/hero_repair.png',
       googleRating: 4.8,
@@ -20,13 +20,46 @@ export const AppProvider = ({ children }) => {
       googleMapsUrl: 'https://www.google.co.in/maps/place/Saini+Refrigeration+and+Electrician...'
     },
     services: [
-      { id: 1, title: 'AC Repair & Installation', description: 'AC servicing, gas filling, installation, cooling issue repair, and underground AC piping.', image: '/images/service_ac.png', icon: 'Thermometer', price: 'Starts at ₹499', basePrice: 499 },
-      { id: 2, title: 'Refrigerator & Deep Freezer', description: 'Fridge repair, deep freezer repair, compressor issues, cooling problems, and maintenance.', image: '/images/service_fridge.png', icon: 'ShieldCheck', price: 'Starts at ₹399', basePrice: 399 },
-      { id: 3, title: 'Washing Machine & Geyser', description: 'Washing machine servicing, motor repair, geyser installation, heating issue repair.', image: '/images/service_washing.png', icon: 'Settings', price: 'Starts at ₹299', basePrice: 299 },
-      { id: 4, title: 'Electrical & Wiring', description: 'Underground wiring, open light fitting, switchboard repair, LPG piping, chemical earthing.', image: '/images/service_electrical.png', icon: 'Zap', price: 'Starts at ₹199', basePrice: 199 }
+      { 
+        id: 1, title: 'AC Repair & Installation', 
+        description: 'AC servicing, gas filling, installation, cooling issue repair, and underground AC piping.', 
+        image: '/images/service_ac.png', icon: 'Thermometer', 
+        price: 'Starts at ₹499', basePrice: 499,
+        rating: 4.76, reviewCount: 2700000, duration: '1 hr 30 mins',
+        includes: ['Indoor unit deep cleaning with foam & jet spray', 'Filter cleaning and sanitization', 'Performance check and testing'],
+        addOns: [{ name: 'Gas Refill (R32)', price: 1499 }, { name: 'Gas Top-up Check', price: 199 }]
+      },
+      { 
+        id: 2, title: 'Refrigerator & Deep Freezer', 
+        description: 'Fridge repair, deep freezer repair, compressor issues, cooling problems, and maintenance.', 
+        image: '/images/service_fridge.png', icon: 'ShieldCheck', 
+        price: 'Starts at ₹399', basePrice: 399,
+        rating: 4.65, reviewCount: 1800000, duration: '1 hr',
+        includes: ['Complete diagnosis of cooling issue', 'Thermostat and compressor check', 'Gas leak detection'],
+        addOns: [{ name: 'Compressor Repair', price: 999 }]
+      },
+      { 
+        id: 3, title: 'Washing Machine & Geyser', 
+        description: 'Washing machine servicing, motor repair, geyser installation, heating issue repair.', 
+        image: '/images/service_washing.png', icon: 'Settings', 
+        price: 'Starts at ₹299', basePrice: 299,
+        rating: 4.58, reviewCount: 950000, duration: '45 mins',
+        includes: ['Motor and drum inspection', 'Drainage pipe cleaning', 'Full cycle test run'],
+        addOns: [{ name: 'Belt Replacement', price: 349 }]
+      },
+      { 
+        id: 4, title: 'Electrical & Wiring', 
+        description: 'Underground wiring, open light fitting, switchboard repair, LPG piping, chemical earthing.', 
+        image: '/images/service_electrical.png', icon: 'Zap', 
+        price: 'Starts at ₹199', basePrice: 199,
+        rating: 4.72, reviewCount: 1200000, duration: '30 mins',
+        includes: ['Wiring inspection and repair', 'Switchboard installation', 'Safety check and earthing test'],
+        addOns: [{ name: 'MCB/Fuse Replacement', price: 149 }, { name: 'Earthing Installation', price: 799 }]
+      }
     ],
     bookings: [],
     coupons: [],
+    banners: [],
     notepad: '',
     commissionPercent: 10
   };
@@ -228,6 +261,35 @@ export const AppProvider = ({ children }) => {
     saveToFirebase(prev => ({ ...prev, notepad: text }));
   };
 
+  // ===== BANNER FUNCTIONS =====
+  const addBanner = (banner) => {
+    saveToFirebase(prev => ({
+      ...prev,
+      banners: [...(prev.banners || []), {
+        id: Date.now().toString(),
+        imageUrl: banner.imageUrl,
+        link: banner.link || '',
+        title: banner.title || '',
+        isActive: true,
+        createdAt: new Date().toISOString()
+      }]
+    }));
+  };
+
+  const updateBanner = (updatedBanner) => {
+    saveToFirebase(prev => ({
+      ...prev,
+      banners: (prev.banners || []).map(b => b.id === updatedBanner.id ? { ...b, ...updatedBanner } : b)
+    }));
+  };
+
+  const deleteBanner = (id) => {
+    saveToFirebase(prev => ({
+      ...prev,
+      banners: (prev.banners || []).filter(b => b.id !== id)
+    }));
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-screen bg-gray-50"><div className="animate-spin h-8 w-8 border-4 border-brand-teal border-t-transparent rounded-full"></div></div>;
   }
@@ -247,7 +309,10 @@ export const AppProvider = ({ children }) => {
       toggleCouponStatus,
       deleteCoupon,
       deleteBooking,
-      updateNotepad
+      updateNotepad,
+      addBanner,
+      updateBanner,
+      deleteBanner
     }}>
       {children}
     </AppContext.Provider>
