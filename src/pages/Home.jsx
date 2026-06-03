@@ -21,11 +21,11 @@ export default function Home() {
 
   const CATEGORIES = [
     { key: 'all', label: 'All Services', icon: <Settings size={22} />, color: 'bg-gray-100 text-gray-700', activeColor: 'bg-brand-blue text-white' },
-    { key: 'AC Services', label: 'AC', icon: <Wind size={22} />, color: 'bg-blue-50 text-blue-600', activeColor: 'bg-blue-600 text-white' },
-    { key: 'Appliance Repair', label: 'Appliances', icon: <Settings size={22} />, color: 'bg-orange-50 text-orange-600', activeColor: 'bg-orange-600 text-white' },
-    { key: 'Geyser Services', label: 'Geyser', icon: <Flame size={22} />, color: 'bg-red-50 text-red-500', activeColor: 'bg-red-500 text-white' },
-    { key: 'RO & Water Purifier', label: 'RO / Purifier', icon: <Droplet size={22} />, color: 'bg-cyan-50 text-cyan-600', activeColor: 'bg-cyan-600 text-white' },
-    { key: 'Electrical Services', label: 'Electrical', icon: <Zap size={22} />, color: 'bg-yellow-50 text-yellow-600', activeColor: 'bg-yellow-600 text-white' },
+    { key: 'AC Services', label: 'AC', image: '/images/ac_service_3d.png', color: 'bg-blue-50 text-blue-600', activeColor: 'bg-blue-600 text-white' },
+    { key: 'Appliance Repair', label: 'Appliances', image: '/images/washing_machine_3d.png', color: 'bg-orange-50 text-orange-600', activeColor: 'bg-orange-600 text-white' },
+    { key: 'Geyser Services', label: 'Geyser', image: '/images/geyser_repair_3d.png', color: 'bg-red-50 text-red-500', activeColor: 'bg-red-500 text-white' },
+    { key: 'RO & Water Purifier', label: 'RO / Purifier', image: '/images/ro_purifier_3d.png', color: 'bg-cyan-50 text-cyan-600', activeColor: 'bg-cyan-600 text-white' },
+    { key: 'Electrical Services', label: 'Electrical', image: '/images/electrical_repair_3d.png', color: 'bg-yellow-50 text-yellow-600', activeColor: 'bg-yellow-600 text-white' },
   ];
 
   const visibleServices = services.filter(s => s.status === 'active' || s.status === 'coming_soon');
@@ -344,12 +344,16 @@ export default function Home() {
           <div className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-center">
             {CATEGORIES.map(cat => (
               <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
-                className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border-2 transition-all duration-200 whitespace-nowrap flex-shrink-0 min-w-[80px] ${
+                className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200 whitespace-nowrap flex-shrink-0 min-w-[90px] h-[90px] ${
                   activeCategory === cat.key
                     ? `${cat.activeColor} border-transparent shadow-lg scale-105`
                     : `${cat.color} border-transparent hover:border-gray-200 hover:shadow-sm`
                 }`}>
-                {cat.icon}
+                {cat.image ? (
+                  <img src={cat.image} alt={cat.label} className="w-10 h-10 object-cover rounded-full bg-white shadow-sm" />
+                ) : (
+                  cat.icon
+                )}
                 <span className="text-[11px] font-bold">{cat.label}</span>
               </button>
             ))}
@@ -361,7 +365,9 @@ export default function Home() {
             groupedServices.map(group => (
               <div key={group.key} className="mb-10 last:mb-0">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`${group.color} p-2 rounded-lg`}>{group.icon}</div>
+                  <div className={`${group.color} p-2 rounded-lg`}>
+                    {group.image ? <img src={group.image} alt={group.label} className="w-6 h-6 object-cover rounded-full bg-white shadow-sm" /> : group.icon}
+                  </div>
                   <h4 className="text-lg md:text-xl font-black text-gray-900">{group.key}</h4>
                   <span className="text-xs text-gray-400 font-bold bg-gray-100 px-2 py-0.5 rounded-full">{group.services.length} services</span>
                 </div>
