@@ -875,6 +875,30 @@ export default function Admin() {
                     <Trash2 size={16} />
                   </button>
 
+                  {/* Status + Category Bar */}
+                  <div className="flex items-center gap-2 px-5 pt-4 pb-0">
+                    <button
+                      onClick={() => {
+                        const next = service.status === 'active' ? 'coming_soon' : 'active';
+                        updateService({...service, status: next});
+                        toast.info(`${service.title} → ${next === 'active' ? '✅ Active' : '🔜 Coming Soon'}`);
+                      }}
+                      className={`text-xs font-black px-3 py-1 rounded-full transition ${
+                        service.status === 'coming_soon'
+                          ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                          : 'bg-green-100 text-green-700 hover:bg-green-200'
+                      }`}
+                    >
+                      {service.status === 'coming_soon' ? '🔜 Coming Soon' : '✅ Active'}
+                    </button>
+                    {service.category && (
+                      <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">{service.category}</span>
+                    )}
+                    {service.featured && (
+                      <span className="text-[10px] font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded-full">⭐ Featured</span>
+                    )}
+                  </div>
+
                   <div className="p-5 flex flex-col md:flex-row gap-5 items-start">
                     <div className="w-full md:w-1/4 flex-shrink-0">
                       <img src={service.image} alt={service.title} className="w-full h-32 object-cover rounded-lg bg-gray-100 mb-2" onError={e => { e.target.src = '/images/hero_repair.png'; }} />

@@ -2,7 +2,8 @@ import React, { useState, useContext, useEffect, useRef } from 'react';
 import { 
   Menu, X, Phone, MapPin, Clock, Settings, Wrench, Thermometer, 
   Zap, ArrowRight, CheckCircle, ShieldCheck, ThumbsUp, Truck, 
-  Star, PhoneCall, MessageSquare, Info, XCircle, ShoppingCart, ChevronRight 
+  Star, PhoneCall, MessageSquare, Info, XCircle, ShoppingCart, ChevronRight,
+  Droplet, Flame, Wind
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { AppContext } from '../context/AppContext';
@@ -16,6 +17,24 @@ export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showServiceDetail, setShowServiceDetail] = useState(null);
+  const [activeCategory, setActiveCategory] = useState('all');
+
+  const CATEGORIES = [
+    { key: 'all', label: 'All Services', icon: <Settings size={22} />, color: 'bg-gray-100 text-gray-700', activeColor: 'bg-brand-blue text-white' },
+    { key: 'AC Services', label: 'AC', icon: <Wind size={22} />, color: 'bg-blue-50 text-blue-600', activeColor: 'bg-blue-600 text-white' },
+    { key: 'Appliance Repair', label: 'Appliances', icon: <Settings size={22} />, color: 'bg-orange-50 text-orange-600', activeColor: 'bg-orange-600 text-white' },
+    { key: 'Geyser Services', label: 'Geyser', icon: <Flame size={22} />, color: 'bg-red-50 text-red-500', activeColor: 'bg-red-500 text-white' },
+    { key: 'RO & Water Purifier', label: 'RO / Purifier', icon: <Droplet size={22} />, color: 'bg-cyan-50 text-cyan-600', activeColor: 'bg-cyan-600 text-white' },
+    { key: 'Electrical Services', label: 'Electrical', icon: <Zap size={22} />, color: 'bg-yellow-50 text-yellow-600', activeColor: 'bg-yellow-600 text-white' },
+  ];
+
+  const visibleServices = services.filter(s => s.status === 'active' || s.status === 'coming_soon');
+  const filteredServices = activeCategory === 'all' ? visibleServices : visibleServices.filter(s => s.category === activeCategory);
+  const groupedServices = CATEGORIES.filter(c => c.key !== 'all').reduce((acc, cat) => {
+    const catServices = visibleServices.filter(s => s.category === cat.key);
+    if (catServices.length > 0) acc.push({ ...cat, services: catServices });
+    return acc;
+  }, []);
 
   const openServiceDetail = (service) => {
     setShowServiceDetail(service);
@@ -143,6 +162,45 @@ export default function Home() {
       case 'Zap': return <Zap className={cls} />;
       default: return <Wrench className={cls} />;
     }
+  };
+
+  const renderServiceCard = (service) => {
+    const isComingSoon = service.status === 'coming_soon';
+    return (
+      <div key={service.id} onClick={() => !isComingSoon && openServiceDetail(service)}
+        className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition duration-300 group border border-gray-100 flex flex-col ${isComingSoon ? 'opacity-75 cursor-default' : 'cursor-pointer'}`}>
+        <div className="h-32 sm:h-36 overflow-hidden relative">
+          <img src={service.image} alt={service.title} className={`w-full h-full object-cover transition duration-500 bg-gray-100 ${isComingSoon ? 'grayscale' : 'group-hover:scale-105'}`} onError={e => { e.target.src = '/images/hero_repair.png'; }} />
+          <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm p-1.5 rounded-lg shadow-sm">{getIcon(service.icon)}</div>
+          {service.featured && !isComingSoon && <div className="absolute top-2.5 left-2.5 bg-brand-orange text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow">Popular</div>}
+          {isComingSoon && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <span className="bg-white text-gray-800 text-xs font-black px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+                <Clock size={14} /> Coming Soon
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="p-3.5 flex-1 flex flex-col">
+          <h4 className="text-sm font-bold text-gray-900 group-hover:text-brand-blue transition mb-1 leading-tight">{service.title}</h4>
+          <p className="text-gray-500 text-[11px] mb-2 line-clamp-2 leading-relaxed">{service.description}</p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-black text-base text-gray-900">₹{service.basePrice}</span>
+            {service.duration && <span className="text-gray-400 text-[10px]">• {service.duration}</span>}
+          </div>
+          {!isComingSoon && (
+            <div className="flex items-center justify-between mt-auto">
+              <span className="inline-flex items-center text-brand-teal font-bold text-xs gap-0.5">
+                View Details <ChevronRight size={14} />
+              </span>
+              {(service.addOns || []).length > 0 && (
+                <span className="text-[9px] text-gray-400 font-bold">{service.addOns.length} add-ons</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -273,54 +331,51 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Services - 2x2 Grid */}
+      {/* Services - Category-based Urban Company Style */}
       <section id="services" className="py-10 md:py-16 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center max-w-xl mx-auto mb-8 md:mb-12">
-            <h2 className="text-brand-teal font-extrabold tracking-wider uppercase text-xs mb-1.5">Our Capabilities</h2>
-            <h3 className="text-2xl md:text-3xl font-black text-brand-blue mb-3">Professional Repair Services</h3>
-            <p className="text-gray-500 text-sm">Comprehensive repair, installation, and maintenance for home appliances and electrical systems.</p>
+          <div className="text-center max-w-xl mx-auto mb-6 md:mb-8">
+            <h2 className="text-brand-teal font-extrabold tracking-wider uppercase text-xs mb-1.5">Our Services</h2>
+            <h3 className="text-2xl md:text-3xl font-black text-brand-blue mb-3">What do you need help with?</h3>
+            <p className="text-gray-500 text-sm">Expert repair, installation, and maintenance — all under one roof.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            {services.map((service) => (
-              <div key={service.id} onClick={() => openServiceDetail(service)} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition duration-300 group border border-gray-100 flex flex-col cursor-pointer">
-                <div className="h-36 sm:h-44 md:h-48 overflow-hidden relative">
-                  <img src={service.image} alt={service.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500 bg-gray-100" onError={e => { e.target.src = '/images/hero_repair.png'; }} />
-                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm p-1.5 rounded-lg shadow-sm">{getIcon(service.icon)}</div>
-                  {service.featured && <div className="absolute top-3 left-3 bg-brand-orange text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow">Popular</div>}
-                </div>
-                <div className="p-4 flex-1 flex flex-col">
-                  <h4 className="text-base md:text-lg font-bold text-gray-900 group-hover:text-brand-blue transition mb-1">{service.title}</h4>
-                  <p className="text-gray-500 text-xs mb-2 line-clamp-2 leading-relaxed">{service.description}</p>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="font-black text-lg text-gray-900">₹{service.basePrice}</span>
-                    {service.basePrice && <span className="text-gray-400 text-sm line-through">₹{Math.round(service.basePrice * 1.2)}</span>}
-                    {service.duration && <span className="text-gray-400 text-xs ml-1">• {service.duration}</span>}
-                  </div>
-                  {(service.includes || []).length > 0 && (
-                    <ul className="mb-3 space-y-1">
-                      {service.includes.slice(0, 2).map((item, i) => (
-                        <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600">
-                          <CheckCircle size={12} className="text-green-500 mt-0.5 flex-shrink-0" />
-                          <span className="leading-tight">{item}</span>
-                        </li>
-                      ))}
-                      {service.includes.length > 2 && <li className="text-xs text-brand-teal font-bold">+{service.includes.length - 2} more included</li>}
-                    </ul>
-                  )}
-                  <div className="flex items-center justify-between mt-auto">
-                    <button className="inline-flex items-center text-brand-teal font-bold text-sm hover:text-teal-700 transition gap-1 cursor-pointer">
-                      View Details <ChevronRight size={16} />
-                    </button>
-                    {(service.addOns || []).length > 0 && (
-                      <span className="text-[10px] text-gray-400 font-bold">{service.addOns.length} add-ons available</span>
-                    )}
-                  </div>
-                </div>
-              </div>
+          {/* Category Tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-center">
+            {CATEGORIES.map(cat => (
+              <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
+                className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border-2 transition-all duration-200 whitespace-nowrap flex-shrink-0 min-w-[80px] ${
+                  activeCategory === cat.key
+                    ? `${cat.activeColor} border-transparent shadow-lg scale-105`
+                    : `${cat.color} border-transparent hover:border-gray-200 hover:shadow-sm`
+                }`}>
+                {cat.icon}
+                <span className="text-[11px] font-bold">{cat.label}</span>
+              </button>
             ))}
           </div>
+
+          {/* Category Sections */}
+          {activeCategory === 'all' ? (
+            // Grouped view
+            groupedServices.map(group => (
+              <div key={group.key} className="mb-10 last:mb-0">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`${group.color} p-2 rounded-lg`}>{group.icon}</div>
+                  <h4 className="text-lg md:text-xl font-black text-gray-900">{group.key}</h4>
+                  <span className="text-xs text-gray-400 font-bold bg-gray-100 px-2 py-0.5 rounded-full">{group.services.length} services</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.services.map(service => renderServiceCard(service))}
+                </div>
+              </div>
+            ))
+          ) : (
+            // Filtered view
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredServices.map(service => renderServiceCard(service))}
+            </div>
+          )}
 
           {/* JustDial + Google Widgets */}
           <div className="mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-2 gap-5">

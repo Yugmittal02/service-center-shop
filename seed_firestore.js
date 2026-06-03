@@ -65,18 +65,19 @@ async function seed() {
   // Load data
   const raw = readFileSync(new URL('./seed_data.json', import.meta.url), 'utf-8');
   const seedData = JSON.parse(raw);
-  const { services, suggestedServices } = seedData;
+  const { services } = seedData;
+  const activeCount = services.filter(s => s.status === 'active').length;
+  const comingSoonCount = services.filter(s => s.status === 'coming_soon').length;
 
-  console.log(`\n📦 Loaded: ${services.length} active + ${suggestedServices.length} suggested services`);
+  console.log(`\n📦 Loaded: ${services.length} total (${activeCount} active, ${comingSoonCount} coming soon)`);
 
   // Validate
   console.log('\n🔍 Validating...');
-  const allServices = [...services, ...suggestedServices];
   let allErrors = [];
-  allServices.forEach((s, i) => {
+  services.forEach((s, i) => {
     allErrors.push(...validateService(s, i));
   });
-  allErrors.push(...checkDuplicates(allServices));
+  allErrors.push(...checkDuplicates(services));
 
   if (allErrors.length > 0) {
     console.error('\n❌ Validation failed:');
@@ -96,12 +97,9 @@ async function seed() {
   console.log(`   Existing coupons: ${(existing.coupons || []).length}`);
   console.log(`   Existing banners: ${(existing.banners || []).length}`);
 
-  // Merge: replace services, keep everything else
-  const merged = {
-    ...existing,
-    services: services,
-    suggestedServices: suggestedServices,
-  };
+  // Merge: replace services, remove old suggestedServices, keep everything else
+  const merged = { ...existing, services };
+  delete merged.suggestedServices;
 
   // Write
   console.log('\n💾 Writing to Firestore...');
@@ -112,28 +110,25 @@ async function seed() {
   console.log('\n🔎 Verifying...');
   const verify = await getDoc(docRef);
   const data = verify.data();
-  const activeCount = (data.services || []).length;
-  const suggestedCount = (data.suggestedServices || []).length;
-  const featuredCount = (data.services || []).filter(s => s.featured).length;
+  const categories = [...new Set((data.services || []).map(s => s.category))];
 
   console.log('\n' + '='.repeat(45));
   console.log('📊 VERIFICATION REPORT');
   console.log('='.repeat(45));
-  console.log(`   Active services:     ${activeCount}`);
-  console.log(`   Featured services:   ${featuredCount}`);
-  console.log(`   Suggested (inactive): ${suggestedCount}`);
-  console.log(`   Bookings preserved:  ${(data.bookings || []).length}`);
-  console.log(`   Coupons preserved:   ${(data.coupons || []).length}`);
-  console.log(`   Banners preserved:   ${(data.banners || []).length}`);
+  console.log(`   Total services:     ${(data.services || []).length}`);
+  console.log(`   Active:             ${(data.services || []).filter(s => s.status === 'active').length}`);
+  console.log(`   Coming Soon:        ${(data.services || []).filter(s => s.status === 'coming_soon').length}`);
+  console.log(`   Categories:         ${categories.join(', ')}`);
+  console.log(`   Bookings preserved: ${(data.bookings || []).length}`);
+  console.log(`   Coupons preserved:  ${(data.coupons || []).length}`);
   console.log('');
-  console.log('📋 Active services:');
-  (data.services || []).forEach((s, i) => {
-    console.log(`   ${i + 1}. ${s.title} — ${s.price} [${s.category}]`);
-  });
-  console.log('');
-  console.log('📋 Suggested services (hidden from public):');
-  (data.suggestedServices || []).forEach((s, i) => {
-    console.log(`   ${i + 1}. ${s.title} — ${s.price}`);
+  categories.forEach(cat => {
+    const catServices = (data.services || []).filter(s => s.category === cat);
+    console.log(`\n📋 ${cat} (${catServices.length}):`);
+    catServices.forEach((s, i) => {
+      const badge = s.status === 'coming_soon' ? ' 🔜' : s.featured ? ' ⭐' : '';
+      console.log(`   ${i + 1}. ${s.title} — ${s.price}${badge}`);
+    });
   });
   console.log('\n✅ Seed completed successfully!\n');
   process.exit(0);
