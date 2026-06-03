@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect, useRef } from 'react';
 import { 
   Menu, X, Phone, MapPin, Clock, Settings, Wrench, Thermometer, 
   Zap, ArrowRight, CheckCircle, ShieldCheck, ThumbsUp, Truck, 
-  Star, PhoneCall, MessageSquare 
+  Star, PhoneCall, MessageSquare, Info, XCircle, ShoppingCart, ChevronRight 
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { AppContext } from '../context/AppContext';
@@ -15,6 +15,20 @@ export default function Home() {
   const { siteDetails, services, coupons, banners } = appData;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showServiceDetail, setShowServiceDetail] = useState(null);
+
+  const openServiceDetail = (service) => {
+    setShowServiceDetail(service);
+    setSelectedAddOns([]);
+  };
+
+  const closeServiceDetail = () => setShowServiceDetail(null);
+
+  const bookFromDetail = () => {
+    const svc = showServiceDetail;
+    closeServiceDetail();
+    openBookingModal(svc);
+  };
 
   const openBookingModal = (service = null) => {
     if (service) {
@@ -269,55 +283,43 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            {services.map((service) => {
-              const formatReviews = (n) => { if (!n) return '0'; if (n >= 1000000) return (n/1000000).toFixed(1)+'M'; if (n >= 1000) return (n/1000).toFixed(1)+'K'; return n; };
-              return (
-              <div key={service.id} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition duration-300 group border border-gray-100 flex flex-col">
+            {services.map((service) => (
+              <div key={service.id} onClick={() => openServiceDetail(service)} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition duration-300 group border border-gray-100 flex flex-col cursor-pointer">
                 <div className="h-36 sm:h-44 md:h-48 overflow-hidden relative">
                   <img src={service.image} alt={service.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500 bg-gray-100" onError={e => { e.target.src = '/images/hero_repair.png'; }} />
                   <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm p-1.5 rounded-lg shadow-sm">{getIcon(service.icon)}</div>
+                  {service.featured && <div className="absolute top-3 left-3 bg-brand-orange text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow">Popular</div>}
                 </div>
                 <div className="p-4 flex-1 flex flex-col">
                   <h4 className="text-base md:text-lg font-bold text-gray-900 group-hover:text-brand-blue transition mb-1">{service.title}</h4>
-                  {/* Rating */}
-                  {service.rating > 0 && (
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Star size={14} className="text-brand-blue fill-brand-blue" />
-                      <span className="font-bold text-sm text-gray-800">{service.rating}</span>
-                      <span className="text-gray-400 text-xs">({formatReviews(service.reviewCount)} reviews)</span>
-                    </div>
-                  )}
-                  {/* Price + Duration */}
-                  <div className="flex items-center gap-2 mb-2">
+                  <p className="text-gray-500 text-xs mb-2 line-clamp-2 leading-relaxed">{service.description}</p>
+                  <div className="flex items-center gap-2 mb-3">
                     <span className="font-black text-lg text-gray-900">₹{service.basePrice}</span>
                     {service.basePrice && <span className="text-gray-400 text-sm line-through">₹{Math.round(service.basePrice * 1.2)}</span>}
                     {service.duration && <span className="text-gray-400 text-xs ml-1">• {service.duration}</span>}
                   </div>
-                  {/* Includes */}
                   {(service.includes || []).length > 0 && (
                     <ul className="mb-3 space-y-1">
-                      {service.includes.slice(0, 3).map((item, i) => (
+                      {service.includes.slice(0, 2).map((item, i) => (
                         <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600">
                           <CheckCircle size={12} className="text-green-500 mt-0.5 flex-shrink-0" />
                           <span className="leading-tight">{item}</span>
                         </li>
                       ))}
+                      {service.includes.length > 2 && <li className="text-xs text-brand-teal font-bold">+{service.includes.length - 2} more included</li>}
                     </ul>
                   )}
-                  {/* Add-ons badges */}
-                  {(service.addOns || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {service.addOns.map((ao, i) => (
-                        <span key={i} className="bg-blue-50 text-brand-blue text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">+ {ao.name} {ao.price ? `₹${ao.price}` : (ao.priceText || '')}</span>
-                      ))}
-                    </div>
-                  )}
-                  <button onClick={() => openBookingModal(service)} className="inline-flex items-center bg-brand-teal text-white font-bold text-sm px-4 py-2 rounded-lg hover:bg-teal-700 transition gap-1.5 w-fit shadow-sm mt-auto cursor-pointer">
-                    Book Now <ArrowRight size={14} />
-                  </button>
+                  <div className="flex items-center justify-between mt-auto">
+                    <button className="inline-flex items-center text-brand-teal font-bold text-sm hover:text-teal-700 transition gap-1 cursor-pointer">
+                      View Details <ChevronRight size={16} />
+                    </button>
+                    {(service.addOns || []).length > 0 && (
+                      <span className="text-[10px] text-gray-400 font-bold">{service.addOns.length} add-ons available</span>
+                    )}
+                  </div>
                 </div>
               </div>
-            );})}
+            ))}
           </div>
 
           {/* JustDial + Google Widgets */}
@@ -407,6 +409,151 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ===== SERVICE DETAIL POPUP ===== */}
+      {showServiceDetail && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-end sm:items-center justify-center" onClick={closeServiceDetail}>
+          <div className="bg-white w-full sm:rounded-2xl sm:max-w-xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative animate-[slideUp_0.3s_ease-out] shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* Close */}
+            <button onClick={closeServiceDetail} className="absolute top-4 right-4 z-20 bg-white/90 backdrop-blur-sm hover:bg-gray-100 text-gray-600 hover:text-gray-900 p-2 rounded-full transition shadow-sm"><X size={18} /></button>
+
+            {/* Hero Image */}
+            <div className="relative h-48 sm:h-56 overflow-hidden sm:rounded-t-2xl">
+              <img src={showServiceDetail.image} alt={showServiceDetail.title} className="w-full h-full object-cover bg-gray-100" onError={e => { e.target.src = '/images/hero_repair.png'; }} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-5 right-16">
+                {showServiceDetail.featured && <span className="inline-block bg-brand-orange text-white text-[10px] font-bold px-2.5 py-1 rounded-full mb-2 shadow">⭐ Popular Service</span>}
+                <h3 className="text-white text-xl sm:text-2xl font-black leading-tight drop-shadow-lg">{showServiceDetail.title}</h3>
+                {showServiceDetail.category && <p className="text-white/80 text-xs font-bold mt-1">{showServiceDetail.category}</p>}
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 sm:p-6 space-y-5">
+              {/* Price + Duration Row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl font-black text-gray-900">₹{showServiceDetail.basePrice}</span>
+                  {showServiceDetail.basePrice && <span className="text-gray-400 text-sm line-through">₹{Math.round(showServiceDetail.basePrice * 1.2)}</span>}
+                </div>
+                {showServiceDetail.duration && (
+                  <div className="flex items-center gap-1.5 bg-blue-50 text-brand-blue px-3 py-1.5 rounded-full">
+                    <Clock size={14} />
+                    <span className="text-xs font-bold">{showServiceDetail.duration}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Rating */}
+              {showServiceDetail.rating > 0 && (
+                <div className="flex items-center gap-2 bg-yellow-50 px-3 py-2 rounded-xl border border-yellow-100">
+                  <Star size={16} className="text-yellow-500 fill-yellow-500" />
+                  <span className="font-bold text-sm text-gray-800">{showServiceDetail.rating}</span>
+                  <span className="text-gray-500 text-xs">({showServiceDetail.reviewCount?.toLocaleString()} reviews)</span>
+                </div>
+              )}
+
+              {/* Description */}
+              <div>
+                <p className="text-gray-600 text-sm leading-relaxed">{showServiceDetail.description}</p>
+                {showServiceDetail.detailedDescription && (
+                  <p className="text-gray-500 text-xs leading-relaxed mt-2">{showServiceDetail.detailedDescription}</p>
+                )}
+              </div>
+
+              {/* What's Included */}
+              {(showServiceDetail.includes || []).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-black text-gray-900 mb-2.5 flex items-center gap-2">
+                    <CheckCircle size={16} className="text-green-500" /> What's Included
+                  </h4>
+                  <ul className="space-y-1.5 bg-green-50/50 p-3.5 rounded-xl border border-green-100">
+                    {showServiceDetail.includes.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle size={13} className="text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="leading-snug">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Add-Ons */}
+              {(showServiceDetail.addOns || []).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-black text-gray-900 mb-2.5 flex items-center gap-2">
+                    <ShoppingCart size={16} className="text-brand-blue" /> Add-Ons
+                  </h4>
+                  <div className="space-y-2">
+                    {showServiceDetail.addOns.map((ao, i) => {
+                      const isSelected = selectedAddOns.find(a => a.name === ao.name);
+                      return (
+                        <button key={i} type="button" onClick={() => toggleAddOn(ao)}
+                          className={`w-full flex items-center justify-between p-3 rounded-xl border-2 text-left transition text-sm ${isSelected ? 'border-brand-teal bg-brand-teal/5 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white'}`}>
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition ${isSelected ? 'bg-brand-teal border-brand-teal' : 'border-gray-300'}`}>
+                              {isSelected && <CheckCircle size={12} className="text-white" />}
+                            </div>
+                            <span className="font-semibold text-gray-800">{ao.name}</span>
+                          </div>
+                          <span className={`font-bold text-xs whitespace-nowrap ${isSelected ? 'text-brand-teal' : 'text-brand-orange'}`}>
+                            {ao.price ? `₹${ao.price}` : (ao.priceText || '')}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedAddOns.length > 0 && (
+                    <div className="mt-2 bg-brand-teal/5 border border-brand-teal/20 px-3 py-2 rounded-lg flex items-center justify-between">
+                      <span className="text-xs font-bold text-brand-teal">{selectedAddOns.length} add-on{selectedAddOns.length > 1 ? 's' : ''} selected</span>
+                      {addOnsTotal > 0 && <span className="text-xs font-black text-brand-teal">+₹{addOnsTotal}</span>}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Exclusions */}
+              {(showServiceDetail.exclusions || []).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-black text-gray-900 mb-2.5 flex items-center gap-2">
+                    <XCircle size={16} className="text-red-400" /> Not Included
+                  </h4>
+                  <ul className="space-y-1.5 bg-red-50/50 p-3.5 rounded-xl border border-red-100">
+                    {showServiceDetail.exclusions.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                        <XCircle size={13} className="text-red-300 mt-0.5 flex-shrink-0" />
+                        <span className="leading-snug">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Pricing Disclaimer */}
+              {showServiceDetail.pricingDisclaimer && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 flex gap-2.5">
+                  <Info size={16} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-yellow-800 leading-relaxed">{showServiceDetail.pricingDisclaimer}</p>
+                </div>
+              )}
+
+              {/* CTA */}
+              <div className="sticky bottom-0 bg-white pt-3 pb-1 border-t border-gray-100 -mx-5 sm:-mx-6 px-5 sm:px-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-xs text-gray-500 font-bold">Estimated Total</p>
+                    <p className="text-xl font-black text-gray-900">₹{(showServiceDetail.basePrice || 0) + addOnsTotal}</p>
+                  </div>
+                  <button onClick={bookFromDetail}
+                    className="bg-brand-teal hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-bold text-sm transition shadow-lg flex items-center gap-2">
+                    <ShoppingCart size={16} /> {showServiceDetail.ctaText || 'Book Now'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== BOOKING POPUP MODAL ===== */}
       {showBookingModal && (
