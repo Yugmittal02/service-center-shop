@@ -280,7 +280,7 @@ export default function Home() {
                 <div className="p-4 flex-1 flex flex-col">
                   <h4 className="text-base md:text-lg font-bold text-gray-900 group-hover:text-brand-blue transition mb-1">{service.title}</h4>
                   {/* Rating */}
-                  {service.rating && (
+                  {service.rating > 0 && (
                     <div className="flex items-center gap-1.5 mb-2">
                       <Star size={14} className="text-brand-blue fill-brand-blue" />
                       <span className="font-bold text-sm text-gray-800">{service.rating}</span>
@@ -308,7 +308,7 @@ export default function Home() {
                   {(service.addOns || []).length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       {service.addOns.map((ao, i) => (
-                        <span key={i} className="bg-blue-50 text-brand-blue text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">+ {ao.name} ₹{ao.price}</span>
+                        <span key={i} className="bg-blue-50 text-brand-blue text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">+ {ao.name} {ao.price ? `₹${ao.price}` : (ao.priceText || '')}</span>
                       ))}
                     </div>
                   )}
@@ -472,7 +472,7 @@ export default function Home() {
                           <button key={i} type="button" onClick={() => toggleAddOn(ao)}
                             className={`w-full flex items-center justify-between p-3 rounded-xl border-2 text-left transition text-sm ${selectedAddOns.find(a => a.name === ao.name) ? 'border-brand-teal bg-brand-teal/5' : 'border-gray-200 hover:border-gray-300'}`}>
                             <span className="font-semibold text-gray-800">+ {ao.name}</span>
-                            <span className="font-black text-brand-orange">₹{ao.price}</span>
+                            <span className="font-black text-brand-orange">{ao.price ? `₹${ao.price}` : (ao.priceText || '')}</span>
                           </button>
                         ))}
                       </div>
@@ -494,7 +494,7 @@ export default function Home() {
                       <h4 className="font-bold text-sm text-gray-700 mb-3 uppercase tracking-wider">Bill Summary</h4>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between"><span className="text-gray-600">{selectedService.title}</span><span className="font-bold">₹{getServicePrice(selectedService)}</span></div>
-                        {selectedAddOns.map((ao, i) => (<div key={i} className="flex justify-between text-gray-600"><span>+ {ao.name}</span><span className="font-bold">₹{ao.price}</span></div>))}
+                        {selectedAddOns.map((ao, i) => (<div key={i} className="flex justify-between text-gray-600"><span>+ {ao.name}</span><span className="font-bold">{ao.price ? `₹${ao.price}` : (ao.priceText || '')}</span></div>))}
                         {appliedCoupon && getDiscount() > 0 && (<div className="flex justify-between text-green-600"><span>Discount ({appliedCoupon.code})</span><span className="font-bold">-₹{getDiscount()}</span></div>)}
                         <div className="border-t border-gray-300 pt-2 flex justify-between text-base"><span className="font-black text-gray-900">Total</span><span className="font-black text-brand-blue">₹{getTotalBill()}</span></div>
                       </div>
