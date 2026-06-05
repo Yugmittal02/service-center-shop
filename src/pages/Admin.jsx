@@ -33,27 +33,6 @@ export default function Admin() {
     setPinInput('');
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 font-sans">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
-          <div className="bg-brand-teal/10 p-4 rounded-full inline-block mb-4">
-            <Lock size={32} className="text-brand-teal" />
-          </div>
-          <h2 className="text-2xl font-black text-gray-900 mb-1">Saini HomeCare</h2>
-          <p className="text-gray-500 text-sm mb-6">Enter admin PIN to continue</p>
-          <form onSubmit={handlePinSubmit} className="space-y-4">
-            <input type="password" inputMode="numeric" maxLength={4} value={pinInput} onChange={e => { setPinInput(e.target.value); setPinError(''); }}
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-brand-teal outline-none text-center text-2xl font-black tracking-[0.5em] bg-gray-50"
-              placeholder="••••" autoFocus />
-            {pinError && <p className="text-red-500 text-xs font-bold">{pinError}</p>}
-            <button type="submit" className="w-full bg-brand-teal hover:bg-teal-700 text-white py-3 rounded-xl font-bold text-sm transition">Unlock Admin Panel</button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   const { appData, updateSiteDetails, addService, updateService, deleteService, updateBookingStatus, addCoupon, toggleCouponStatus, deleteCoupon, deleteBooking, updateNotepad, addManualBooking, updateCommissionPercent, addBanner, updateBanner, deleteBanner } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('bookings');
   const [localSiteDetails, setLocalSiteDetails] = useState(appData.siteDetails || {});
@@ -194,6 +173,27 @@ export default function Admin() {
       }
     }, 500);
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 font-sans">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+          <div className="bg-brand-teal/10 p-4 rounded-full inline-block mb-4">
+            <Lock size={32} className="text-brand-teal" />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 mb-1">Saini HomeCare</h2>
+          <p className="text-gray-500 text-sm mb-6">Enter admin PIN to continue</p>
+          <form onSubmit={handlePinSubmit} className="space-y-4">
+            <input type="password" inputMode="numeric" maxLength={4} value={pinInput} onChange={e => { setPinInput(e.target.value); setPinError(''); }}
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-brand-teal outline-none text-center text-2xl font-black tracking-[0.5em] bg-gray-50"
+              placeholder="••••" autoFocus />
+            {pinError && <p className="text-red-500 text-xs font-bold">{pinError}</p>}
+            <button type="submit" className="w-full bg-brand-teal hover:bg-teal-700 text-white py-3 rounded-xl font-bold text-sm transition">Unlock Admin Panel</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
