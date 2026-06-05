@@ -51,6 +51,7 @@ export default function Admin() {
   const [showManualModal, setShowManualModal] = useState(false);
   const [manualCostOfGoods, setManualCostOfGoods] = useState('');
   const [manualCostOfService, setManualCostOfService] = useState('');
+  const [manualServices, setManualServices] = useState([]);
 
   // Users Tab State
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +65,28 @@ export default function Admin() {
     setLastRefresh(new Date());
     setLocalSiteDetails(appData.siteDetails || {});
   }, [appData]);
+
+  // Auto-calculate modalCostOfService when modalServices change
+  useEffect(() => {
+    if (completeModal) {
+      const total = modalServices.reduce((sum, title) => {
+        const svc = (appData.services || []).find(s => s.title === title);
+        return sum + (svc?.basePrice || 0);
+      }, 0);
+      setModalCostOfService(total || '');
+    }
+  }, [modalServices, completeModal, appData.services]);
+
+  // Auto-calculate manualCostOfService when manualServices change
+  useEffect(() => {
+    if (showManualModal) {
+      const total = manualServices.reduce((sum, title) => {
+        const svc = (appData.services || []).find(s => s.title === title);
+        return sum + (svc?.basePrice || 0);
+      }, 0);
+      setManualCostOfService(total || '');
+    }
+  }, [manualServices, showManualModal, appData.services]);
 
   const handleSiteDetailsSave = (e) => {
     e.preventDefault();
@@ -114,6 +137,10 @@ export default function Admin() {
     setModalServices(prev => prev.includes(title) ? prev.filter(s => s !== title) : [...prev, title]);
   };
 
+  const toggleManualService = (title) => {
+    setManualServices(prev => prev.includes(title) ? prev.filter(s => s !== title) : [...prev, title]);
+  };
+
   const pendingCount = (appData.bookings || []).filter(b => b.status === 'Pending').length;
   const completedBookings = (appData.bookings || []).filter(b => b.status === 'Completed');
   
@@ -158,7 +185,12 @@ export default function Admin() {
           // Open WhatsApp - clean phone number
           const cleanPhone = user.phone.replace(/\D/g, '').replace(/^0+/, '');
           const phoneWithCode = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
-          const text = `Hello ${user.name},\n\nHere is the summary of your service on ${new Date(booking.date).toLocaleDateString()}:\n\nService: ${booking.service}\nAmount: ₹${booking.paymentReceived}\n\nPlease find the attached detailed invoice image.\n\nThank you for choosing Saini HomeCare!`;
+          const site = appData.siteDetails || {};
+          let text = `Hello ${user.name},\n\nHere is the summary of your service on ${new Date(booking.date).toLocaleDateString()}:\n\nService: ${booking.service}\nAmount: ₹${booking.paymentReceived}\n\nPlease find the attached detailed invoice image.\n\n`;
+          if (site.bankName || site.accountNumber || site.ifscCode) {
+            text += `*Bank Details for Payment:*\nBank: ${site.bankName || 'N/A'}\nAccount Name: ${site.accountName || 'N/A'}\nA/C No: ${site.accountNumber || 'N/A'}\nIFSC: ${site.ifscCode || 'N/A'}\n\n`;
+          }
+          text += `Thank you for choosing Saini HomeCare!`;
           const waLink = `https://wa.me/${phoneWithCode}?text=${encodeURIComponent(text)}`;
           window.open(waLink, '_blank');
           
@@ -201,7 +233,7 @@ export default function Admin() {
       {/* ===== COMPLETION MODAL ===== */}
       {completeModal && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4" onClick={() => setCompleteModal(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <button onClick={() => setCompleteModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"><X size={20} /></button>
             <h3 className="text-xl font-black text-gray-900 mb-1">Complete Booking</h3>
             <p className="text-sm text-gray-500 mb-5">Customer: <strong>{completeModal.name}</strong> | {completeModal.phone}</p>
@@ -213,7 +245,7 @@ export default function Admin() {
                   <button key={s.id} type="button" onClick={() => toggleModalService(s.title)}
                     className={`p-2.5 rounded-lg border-2 text-left text-sm font-semibold transition ${modalServices.includes(s.title) ? 'border-brand-teal bg-brand-teal/5 text-brand-teal' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
                   >
-                    {s.title}
+                    {s.title} <span className="text-xs opacity-70 block mt-0.5">₹{s.basePrice}</span>
                   </button>
                 ))}
               </div>
@@ -236,7 +268,7 @@ export default function Admin() {
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-gray-500 mb-1">Cost of Service (₹)</label>
-                  <input type="number" value={modalCostOfService} onChange={e => setModalCostOfService(e.target.value)} placeholder="0" className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-brand-teal outline-none text-lg font-bold" autoFocus />
+                  <input type="number" readOnly value={modalCostOfService} placeholder="0" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-500 outline-none text-lg font-bold cursor-not-allowed" />
                 </div>
               </div>
             </div>
@@ -262,7 +294,7 @@ export default function Admin() {
       {/* ===== MANUAL BOOKING MODAL ===== */}
       {showManualModal && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4" onClick={() => setShowManualModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowManualModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"><X size={20} /></button>
             <h3 className="text-xl font-black text-brand-teal mb-1 flex items-center gap-2"><Plus size={20} /> Add Manual Entry</h3>
             <p className="text-sm text-gray-500 mb-5">Create a completed booking manually.</p>
@@ -271,10 +303,14 @@ export default function Admin() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const form = e.target;
+                if (manualServices.length === 0) {
+                  toast.error('Please select at least one service');
+                  return;
+                }
                 addManualBooking({
                   name: form.customerName.value,
                   phone: form.phone.value,
-                  service: form.service.value,
+                  service: manualServices.join(', '),
                   costOfGoods: manualCostOfGoods,
                   costOfService: manualCostOfService,
                   message: form.message.value
@@ -282,6 +318,7 @@ export default function Admin() {
                 setShowManualModal(false);
                 setManualCostOfGoods('');
                 setManualCostOfService('');
+                setManualServices([]);
                 toast.success('Manual entry added!');
               }}
               className="space-y-4"
@@ -298,11 +335,16 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Service *</label>
-                <select required name="service" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm bg-white">
-                  <option value="">Select Service...</option>
-                  {(appData.services || []).map(s => <option key={s.id} value={s.title}>{s.title}</option>)}
-                </select>
+                <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">Services Provided (select all that apply) *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(appData.services || []).map(s => (
+                    <button key={s.id} type="button" onClick={() => toggleManualService(s.title)}
+                      className={`p-2.5 rounded-lg border-2 text-left text-sm font-semibold transition ${manualServices.includes(s.title) ? 'border-brand-teal bg-brand-teal/5 text-brand-teal' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                    >
+                      {s.title} <span className="text-xs opacity-70 block mt-0.5">₹{s.basePrice}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
@@ -314,7 +356,7 @@ export default function Admin() {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-gray-500 mb-1">Cost of Service (₹) *</label>
-                    <input required type="number" value={manualCostOfService} onChange={e => setManualCostOfService(e.target.value)} placeholder="0" className="w-full px-3.5 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-bold" />
+                    <input required type="number" readOnly value={manualCostOfService} placeholder="0" className="w-full px-3.5 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 outline-none text-sm font-bold cursor-not-allowed" />
                   </div>
                 </div>
                 <div className="flex justify-between text-xs mb-1">
@@ -445,7 +487,7 @@ export default function Admin() {
 
             {/* Manual Booking Button */}
             <div className="mb-8">
-              <button onClick={() => setShowManualModal(true)} className="bg-brand-teal hover:bg-teal-700 text-white px-5 py-3 rounded-xl font-bold text-sm transition flex items-center gap-2 shadow-sm">
+              <button onClick={() => { setShowManualModal(true); setManualServices([]); }} className="bg-brand-teal hover:bg-teal-700 text-white px-5 py-3 rounded-xl font-bold text-sm transition flex items-center gap-2 shadow-sm">
                 <Plus size={18} /> Add Manual Booking Entry
               </button>
             </div>
@@ -812,6 +854,23 @@ export default function Admin() {
                 </div>
               ))}
 
+              <div className="pt-5 border-t border-gray-100">
+                <h4 className="text-sm font-black text-gray-900 mb-4 uppercase tracking-wider">Bank Details (For Invoices)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                  {[
+                    { label: 'Bank Name', key: 'bankName' },
+                    { label: 'Account Name', key: 'accountName' },
+                    { label: 'Account Number', key: 'accountNumber' },
+                    { label: 'IFSC Code', key: 'ifscCode' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">{f.label}</label>
+                      <input type="text" value={localSiteDetails[f.key] || ''} onChange={e => setLocalSiteDetails({...localSiteDetails, [f.key]: e.target.value})} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none text-sm" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="pt-4 border-t border-gray-100">
                 <button type="submit" className="bg-brand-teal hover:bg-teal-700 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition shadow-sm">Save Changes</button>
               </div>
@@ -1106,7 +1165,15 @@ export default function Admin() {
                             </span>
                             {b.status === 'Completed' && (
                               <>
-                                <p className="font-black text-gray-900 text-sm">₹{b.paymentReceived}</p>
+                                <div className="text-right flex flex-col items-end">
+                                  <p className="font-black text-gray-900 text-sm">Total: ₹{b.paymentReceived}</p>
+                                  {(b.costOfGoods > 0 || b.costOfService > 0) && (
+                                    <div className="text-[10px] text-gray-500 font-bold mt-1 bg-gray-100 px-2 py-1 rounded">
+                                      {b.costOfGoods > 0 && <span className="mr-2">COG: ₹{b.costOfGoods}</span>}
+                                      {b.costOfService > 0 && <span>COS: ₹{b.costOfService}</span>}
+                                    </div>
+                                  )}
+                                </div>
                                 <button 
                                   onClick={() => handleGenerateInvoice(b, user)}
                                   disabled={isGeneratingInvoice}
@@ -1222,8 +1289,25 @@ export default function Admin() {
               </table>
             </div>
 
-            {/* Totals */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '48px' }}>
+            {/* Payment Details & Totals */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '48px', gap: '24px' }}>
+              
+              {/* Bank Details */}
+              <div style={{ width: '50%', padding: '16px', borderRadius: '12px', backgroundColor: '#f0fdfa', border: '1px solid #ccfbf1' }}>
+                <p style={{ fontSize: '11px', fontWeight: 800, color: '#0d9488', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>Payment Details</p>
+                {(localSiteDetails.bankName || localSiteDetails.accountNumber) ? (
+                  <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.6' }}>
+                    <p><strong>Bank:</strong> {localSiteDetails.bankName || '-'}</p>
+                    <p><strong>A/C Name:</strong> {localSiteDetails.accountName || '-'}</p>
+                    <p><strong>A/C No:</strong> {localSiteDetails.accountNumber || '-'}</p>
+                    <p><strong>IFSC:</strong> {localSiteDetails.ifscCode || '-'}</p>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '12px', color: '#6b7280', fontStyle: 'italic' }}>Pay via Cash or UPI at the time of service.</p>
+                )}
+              </div>
+
+              {/* Totals */}
               <div style={{ width: '50%', backgroundColor: '#f9fafb', padding: '16px', borderRadius: '12px', border: '1px solid #f3f4f6' }}>
                 {invoiceData.booking.costOfGoods > 0 && (
                   <>
