@@ -346,7 +346,7 @@ export default function Admin() {
               <div className="bg-gray-50 rounded-xl p-4 mb-5 border border-gray-200">
                 <div className="flex justify-between text-sm mb-1"><span className="text-gray-600">Total Payment</span><span className="font-bold text-green-600">₹{(parseFloat(modalCostOfGoods) || 0) + (parseFloat(modalCostOfService) || 0)}</span></div>
                 <div className="flex justify-between text-sm mb-1"><span className="text-gray-600">Commission ({commPct}% on Service)</span><span className="font-bold text-blue-600">₹{Math.round((parseFloat(modalCostOfService) || 0) * commPct / 100)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-600">Services</span><span className="font-bold text-gray-900">{modalServices.join(', ') || '-'}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-600">Services</span><span className="font-bold text-gray-900">{modalServices.map(s => s.qty > 1 ? `${s.title} (x${s.qty})` : s.title).join(', ') || '-'}</span></div>
               </div>
             ) : null}
 
@@ -376,7 +376,8 @@ export default function Admin() {
                   toast.error('Please select at least one service or enter a custom service name');
                   return;
                 }
-                const allServices = manualCustomServiceName ? [...manualServices, manualCustomServiceName].join(', ') : manualServices.join(', ');
+                const mappedManualServices = manualServices.map(s => s.qty > 1 ? `${s.title} (x${s.qty})` : s.title);
+                const allServices = manualCustomServiceName ? [...mappedManualServices, manualCustomServiceName].join(', ') : mappedManualServices.join(', ');
                 addManualBooking({
                   name: form.customerName.value,
                   phone: form.phone.value,
