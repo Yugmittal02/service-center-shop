@@ -46,12 +46,16 @@ export default function Admin() {
   const [modalServices, setModalServices] = useState([]);
   const [modalApplianceModel, setModalApplianceModel] = useState('');
   const [modalNotes, setModalNotes] = useState('');
+  const [modalCustomServiceName, setModalCustomServiceName] = useState('');
+  const [modalCustomServiceCost, setModalCustomServiceCost] = useState('');
 
   // Manual Booking Modal State
   const [showManualModal, setShowManualModal] = useState(false);
   const [manualCostOfGoods, setManualCostOfGoods] = useState('');
   const [manualCostOfService, setManualCostOfService] = useState('');
   const [manualServices, setManualServices] = useState([]);
+  const [manualCustomServiceName, setManualCustomServiceName] = useState('');
+  const [manualCustomServiceCost, setManualCustomServiceCost] = useState('');
 
   // Users Tab State
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,24 +73,26 @@ export default function Admin() {
   // Auto-calculate modalCostOfService when modalServices change
   useEffect(() => {
     if (completeModal) {
-      const total = modalServices.reduce((sum, title) => {
-        const svc = (appData.services || []).find(s => s.title === title);
-        return sum + (svc?.basePrice || 0);
+      const total = modalServices.reduce((sum, item) => {
+        const svc = (appData.services || []).find(s => s.title === item.title);
+        return sum + ((svc?.basePrice || 0) * (item.qty || 1));
       }, 0);
-      setModalCostOfService(total || '');
+      const customCost = parseFloat(modalCustomServiceCost) || 0;
+      setModalCostOfService((total + customCost) || '');
     }
-  }, [modalServices, completeModal, appData.services]);
+  }, [modalServices, completeModal, appData.services, modalCustomServiceCost]);
 
   // Auto-calculate manualCostOfService when manualServices change
   useEffect(() => {
     if (showManualModal) {
-      const total = manualServices.reduce((sum, title) => {
-        const svc = (appData.services || []).find(s => s.title === title);
-        return sum + (svc?.basePrice || 0);
+      const total = manualServices.reduce((sum, item) => {
+        const svc = (appData.services || []).find(s => s.title === item.title);
+        return sum + ((svc?.basePrice || 0) * (item.qty || 1));
       }, 0);
-      setManualCostOfService(total || '');
+      const customCost = parseFloat(manualCustomServiceCost) || 0;
+      setManualCostOfService((total + customCost) || '');
     }
-  }, [manualServices, showManualModal, appData.services]);
+  }, [manualServices, showManualModal, appData.services, manualCustomServiceCost]);
 
   const handleSiteDetailsSave = (e) => {
     e.preventDefault();
@@ -107,9 +113,11 @@ export default function Admin() {
       setCompleteModal(booking);
       setModalCostOfGoods('');
       setModalCostOfService('');
-      setModalServices([booking.service]);
+      setModalServices([{ title: booking.service, qty: 1 }]);
       setModalApplianceModel('');
       setModalNotes('');
+      setModalCustomServiceName('');
+      setModalCustomServiceCost('');
     } else {
       updateBookingStatus(booking.id, newStatus);
       toast.info(`Status changed to ${newStatus}`);
@@ -122,23 +130,53 @@ export default function Admin() {
     const serviceCost = parseFloat(modalCostOfService) || 0;
     const pay = goods + serviceCost;
     
+    const completedTitles = modalServices.flatMap(item => Array(item.qty || 1).fill(item.title));
     updateBookingStatus(completeModal.id, 'Completed', pay, {
       applianceModel: modalApplianceModel,
       completionNotes: modalNotes,
-      completedServices: modalServices,
+      completedServices: modalCustomServiceName ? [...completedTitles, modalCustomServiceName] : completedTitles,
+      serviceQuantities: modalServices,
       costOfGoods: goods,
-      costOfService: serviceCost
+      costOfService: serviceCost,
+      customServiceName: modalCustomServiceName,
+      customServiceCost: parseFloat(modalCustomServiceCost) || 0
     });
     toast.success(`Booking completed! Payment: ₹${pay}, Commission: ₹${Math.round(serviceCost * commPct / 100)}`);
     setCompleteModal(null);
   };
 
-  const toggleModalService = (title) => {
-    setModalServices(prev => prev.includes(title) ? prev.filter(s => s !== title) : [...prev, title]);
+  const getModalServiceQty = (title) => {
+    const item = modalServices.find(s => s.title === title);
+    return item ? item.qty : 0;
   };
 
-  const toggleManualService = (title) => {
-    setManualServices(prev => prev.includes(title) ? prev.filter(s => s !== title) : [...prev, title]);
+  const setModalServiceQty = (title, qty) => {
+    if (qty <= 0) {
+      setModalServices(prev => prev.filter(s => s.title !== title));
+    } else {
+      setModalServices(prev => {
+        const exists = prev.find(s => s.title === title);
+        if (exists) return prev.map(s => s.title === title ? { ...s, qty } : s);
+        return [...prev, { title, qty }];
+      });
+    }
+  };
+
+  const getManualServiceQty = (title) => {
+    const item = manualServices.find(s => s.title === title);
+    return item ? item.qty : 0;
+  };
+
+  const setManualServiceQty = (title, qty) => {
+    if (qty <= 0) {
+      setManualServices(prev => prev.filter(s => s.title !== title));
+    } else {
+      setManualServices(prev => {
+        const exists = prev.find(s => s.title === title);
+        if (exists) return prev.map(s => s.title === title ? { ...s, qty } : s);
+        return [...prev, { title, qty }];
+      });
+    }
   };
 
   const pendingCount = (appData.bookings || []).filter(b => b.status === 'Pending').length;
@@ -241,13 +279,44 @@ export default function Admin() {
             <div className="mb-4">
               <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">Services Provided (select all that apply)</label>
               <div className="grid grid-cols-2 gap-2">
-                {(appData.services || []).map(s => (
-                  <button key={s.id} type="button" onClick={() => toggleModalService(s.title)}
-                    className={`p-2.5 rounded-lg border-2 text-left text-sm font-semibold transition ${modalServices.includes(s.title) ? 'border-brand-teal bg-brand-teal/5 text-brand-teal' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                  >
-                    {s.title} <span className="text-xs opacity-70 block mt-0.5">₹{s.basePrice}</span>
-                  </button>
-                ))}
+                {(appData.services || []).map(s => {
+                  const qty = getModalServiceQty(s.title);
+                  return (
+                    <div key={s.id} className={`p-2 rounded-lg border-2 flex items-center justify-between transition ${qty > 0 ? 'border-brand-teal bg-brand-teal/5' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                      <div className="flex-1 cursor-pointer" onClick={() => qty === 0 ? setModalServiceQty(s.title, 1) : null}>
+                        <p className={`text-sm font-semibold leading-tight ${qty > 0 ? 'text-brand-teal' : 'text-gray-600'}`}>{s.title}</p>
+                        <p className="text-[10px] opacity-70 mt-0.5">₹{s.basePrice}</p>
+                      </div>
+                      {qty > 0 && (
+                        <div className="flex items-center gap-1.5 bg-white rounded border border-brand-teal/30 p-0.5">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setModalServiceQty(s.title, qty - 1); }} className="w-5 h-5 flex items-center justify-center text-brand-teal hover:bg-brand-teal/10 rounded font-black">-</button>
+                          <span className="text-xs font-bold text-brand-teal w-3 text-center">{qty}</span>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setModalServiceQty(s.title, qty + 1); }} className="w-5 h-5 flex items-center justify-center text-brand-teal hover:bg-brand-teal/10 rounded font-black">+</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">Custom Service Entry</label>
+              <div className="bg-indigo-50/50 p-3.5 rounded-xl border border-indigo-100 space-y-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 mb-1">Name of Service</label>
+                  <input type="text" value={modalCustomServiceName} onChange={e => setModalCustomServiceName(e.target.value)} placeholder="e.g., Custom Repair Work" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 mb-1">Service Cost (₹)</label>
+                    <input type="text" value={modalCustomServiceCost} onChange={e => setModalCustomServiceCost(e.target.value)} placeholder="0" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 mb-1">Cost of Goods (₹)</label>
+                    <input type="text" value={modalCostOfGoods} onChange={e => setModalCostOfGoods(e.target.value)} placeholder="0" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-bold" />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -303,22 +372,27 @@ export default function Admin() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const form = e.target;
-                if (manualServices.length === 0) {
-                  toast.error('Please select at least one service');
+                if (manualServices.length === 0 && !manualCustomServiceName) {
+                  toast.error('Please select at least one service or enter a custom service name');
                   return;
                 }
+                const allServices = manualCustomServiceName ? [...manualServices, manualCustomServiceName].join(', ') : manualServices.join(', ');
                 addManualBooking({
                   name: form.customerName.value,
                   phone: form.phone.value,
-                  service: manualServices.join(', '),
+                  service: allServices,
                   costOfGoods: manualCostOfGoods,
                   costOfService: manualCostOfService,
-                  message: form.message.value
+                  message: form.message.value,
+                  customServiceName: manualCustomServiceName,
+                  customServiceCost: parseFloat(manualCustomServiceCost) || 0
                 });
                 setShowManualModal(false);
                 setManualCostOfGoods('');
                 setManualCostOfService('');
                 setManualServices([]);
+                setManualCustomServiceName('');
+                setManualCustomServiceCost('');
                 toast.success('Manual entry added!');
               }}
               className="space-y-4"
@@ -337,13 +411,44 @@ export default function Admin() {
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">Services Provided (select all that apply) *</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {(appData.services || []).map(s => (
-                    <button key={s.id} type="button" onClick={() => toggleManualService(s.title)}
-                      className={`p-2.5 rounded-lg border-2 text-left text-sm font-semibold transition ${manualServices.includes(s.title) ? 'border-brand-teal bg-brand-teal/5 text-brand-teal' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                    >
-                      {s.title} <span className="text-xs opacity-70 block mt-0.5">₹{s.basePrice}</span>
-                    </button>
-                  ))}
+                  {(appData.services || []).map(s => {
+                    const qty = getManualServiceQty(s.title);
+                    return (
+                      <div key={s.id} className={`p-2 rounded-lg border-2 flex items-center justify-between transition ${qty > 0 ? 'border-brand-teal bg-brand-teal/5' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <div className="flex-1 cursor-pointer" onClick={() => qty === 0 ? setManualServiceQty(s.title, 1) : null}>
+                          <p className={`text-sm font-semibold leading-tight ${qty > 0 ? 'text-brand-teal' : 'text-gray-600'}`}>{s.title}</p>
+                          <p className="text-[10px] opacity-70 mt-0.5">₹{s.basePrice}</p>
+                        </div>
+                        {qty > 0 && (
+                          <div className="flex items-center gap-1.5 bg-white rounded border border-brand-teal/30 p-0.5">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setManualServiceQty(s.title, qty - 1); }} className="w-5 h-5 flex items-center justify-center text-brand-teal hover:bg-brand-teal/10 rounded font-black">-</button>
+                            <span className="text-xs font-bold text-brand-teal w-3 text-center">{qty}</span>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setManualServiceQty(s.title, qty + 1); }} className="w-5 h-5 flex items-center justify-center text-brand-teal hover:bg-brand-teal/10 rounded font-black">+</button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">Custom Service Entry</label>
+                <div className="bg-indigo-50/50 p-3.5 rounded-xl border border-indigo-100 space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 mb-1">Name of Service</label>
+                    <input type="text" value={manualCustomServiceName} onChange={e => setManualCustomServiceName(e.target.value)} placeholder="e.g., Custom Repair Work" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 mb-1">Service Cost (₹)</label>
+                      <input type="text" value={manualCustomServiceCost} onChange={e => setManualCustomServiceCost(e.target.value)} placeholder="0" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 mb-1">Cost of Goods (₹)</label>
+                      <input type="text" value={manualCostOfGoods} onChange={e => setManualCostOfGoods(e.target.value)} placeholder="0" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-bold" />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -487,7 +592,7 @@ export default function Admin() {
 
             {/* Manual Booking Button */}
             <div className="mb-8">
-              <button onClick={() => { setShowManualModal(true); setManualServices([]); }} className="bg-brand-teal hover:bg-teal-700 text-white px-5 py-3 rounded-xl font-bold text-sm transition flex items-center gap-2 shadow-sm">
+              <button onClick={() => { setShowManualModal(true); setManualServices([]); setManualCustomServiceName(''); setManualCustomServiceCost(''); setManualCostOfGoods(''); }} className="bg-brand-teal hover:bg-teal-700 text-white px-5 py-3 rounded-xl font-bold text-sm transition flex items-center gap-2 shadow-sm">
                 <Plus size={18} /> Add Manual Booking Entry
               </button>
             </div>
@@ -910,7 +1015,7 @@ export default function Admin() {
               >
                 <input required name="title" type="text" placeholder="Service Title (e.g., RO Repair)" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" />
                 <input required name="price" type="text" placeholder="Price text (e.g., Starts at ₹199)" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" />
-                <input required name="basePrice" type="number" placeholder="Base Price ₹ (e.g., 199)" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" />
+                <input required name="basePrice" type="text" placeholder="Base Price ₹ (e.g., 199)" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" />
                 <input name="image" type="text" placeholder="Image URL (optional)" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm" />
                 <input required name="description" type="text" placeholder="Short description..." className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm sm:col-span-2" />
                 <div className="sm:col-span-3">
@@ -981,7 +1086,7 @@ export default function Admin() {
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-gray-600 mb-1">Base ₹</label>
-                          <input type="number" value={service.basePrice || 0} onChange={(e) => updateService({...service, basePrice: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-semibold text-green-600" />
+                          <input type="text" value={service.basePrice || ''} onChange={(e) => updateService({...service, basePrice: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-brand-teal outline-none text-sm font-semibold text-green-600" />
                         </div>
                       </div>
 
@@ -1077,11 +1182,11 @@ export default function Admin() {
                           <div className="flex items-center gap-1">
                             <span className="text-gray-500 text-sm">₹</span>
                             <input 
-                              type="number" 
+                              type="text" 
                               value={addon.price} 
                               onChange={(e) => {
                                 const newAddOns = [...(service.addOns || [])];
-                                newAddOns[idx] = { ...newAddOns[idx], price: parseFloat(e.target.value) || 0 };
+                                newAddOns[idx] = { ...newAddOns[idx], price: e.target.value };
                                 updateService({...service, addOns: newAddOns});
                               }}
                               className="w-20 px-2 py-1.5 rounded-lg border border-gray-200 focus:border-brand-teal outline-none text-sm font-bold text-right"
