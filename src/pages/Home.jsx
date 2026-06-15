@@ -80,7 +80,7 @@ export default function Home() {
   const toggleAddOn = (addon) => {
     setSelectedAddOns(prev => prev.find(a => a.name === addon.name) ? prev.filter(a => a.name !== addon.name) : [...prev, addon]);
   };
-  const addOnsTotal = selectedAddOns.reduce((s, a) => s + (a.price || 0), 0);
+  const addOnsTotal = selectedAddOns.reduce((s, a) => s + (parseFloat(a.price) || 0), 0);
 
   // Multi-step booking
   const [bookingStep, setBookingStep] = useState(1);
@@ -92,7 +92,7 @@ export default function Home() {
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
-  const getServicePrice = (service) => service?.basePrice || 0;
+  const getServicePrice = (service) => parseFloat(service?.basePrice) || 0;
 
   const getDiscount = () => {
     if (!appliedCoupon || !selectedService) return 0;
@@ -185,7 +185,7 @@ export default function Home() {
           <h4 className="text-sm font-bold text-gray-900 group-hover:text-brand-blue transition mb-1 leading-tight">{service.title}</h4>
           <p className="text-gray-500 text-[11px] mb-2 line-clamp-2 leading-relaxed">{service.description}</p>
           <div className="flex items-center gap-2 mb-2">
-            <span className="font-black text-base text-gray-900">₹{service.basePrice}</span>
+            <span className="font-black text-base text-gray-900">₹{parseFloat(service.basePrice) || 0}</span>
             {service.duration && <span className="text-gray-400 text-[10px]">• {service.duration}</span>}
           </div>
           {!isComingSoon && (
@@ -494,8 +494,8 @@ export default function Home() {
               {/* Price + Duration Row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-2xl font-black text-gray-900">₹{showServiceDetail.basePrice}</span>
-                  {showServiceDetail.basePrice && <span className="text-gray-400 text-sm line-through">₹{Math.round(showServiceDetail.basePrice * 1.2)}</span>}
+                  <span className="text-2xl font-black text-gray-900">₹{parseFloat(showServiceDetail.basePrice) || 0}</span>
+                  {showServiceDetail.basePrice && <span className="text-gray-400 text-sm line-through">₹{Math.round((parseFloat(showServiceDetail.basePrice) || 0) * 1.2)}</span>}
                 </div>
                 {showServiceDetail.duration && (
                   <div className="flex items-center gap-1.5 bg-blue-50 text-brand-blue px-3 py-1.5 rounded-full">
@@ -546,7 +546,7 @@ export default function Home() {
                     <ShoppingCart size={16} className="text-brand-blue" /> Add-Ons
                   </h4>
                   <div className="space-y-2">
-                    {showServiceDetail.addOns.map((ao, i) => {
+                    {showServiceDetail.addOns.filter(ao => ao.name && ao.name.trim()).map((ao, i) => {
                       const isSelected = selectedAddOns.find(a => a.name === ao.name);
                       return (
                         <button key={i} type="button" onClick={() => toggleAddOn(ao)}
@@ -603,7 +603,7 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-xs text-gray-500 font-bold">Estimated Total</p>
-                    <p className="text-xl font-black text-gray-900">₹{(showServiceDetail.basePrice || 0) + addOnsTotal}</p>
+                    <p className="text-xl font-black text-gray-900">₹{(parseFloat(showServiceDetail.basePrice) || 0) + addOnsTotal}</p>
                   </div>
                   <button onClick={bookFromDetail}
                     className="bg-brand-teal hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-bold text-sm transition shadow-lg flex items-center gap-2">
@@ -667,7 +667,7 @@ export default function Home() {
                       <button key={s.id} type="button" onClick={() => { setSelectedService(s); setSelectedAddOns([]); }}
                         className={`p-3 rounded-xl border-2 text-left transition ${selectedService?.id === s.id ? 'border-brand-teal bg-brand-teal/5 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}>
                         <p className="font-bold text-sm text-gray-900 leading-tight mb-1">{s.title}</p>
-                        <p className="text-brand-orange font-black text-base">₹{s.basePrice || 0}</p>
+                        <p className="text-brand-orange font-black text-base">₹{parseFloat(s.basePrice) || 0}</p>
                       </button>
                     ))}
                   </div>
@@ -676,7 +676,7 @@ export default function Home() {
                     <div className="mb-4">
                       <label className="block text-sm font-bold text-gray-700 mb-2">Add-ons (Optional)</label>
                       <div className="space-y-2">
-                        {selectedService.addOns.map((ao, i) => (
+                        {selectedService.addOns.filter(ao => ao.name && ao.name.trim()).map((ao, i) => (
                           <button key={i} type="button" onClick={() => toggleAddOn(ao)}
                             className={`w-full flex items-center justify-between p-3 rounded-xl border-2 text-left transition text-sm ${selectedAddOns.find(a => a.name === ao.name) ? 'border-brand-teal bg-brand-teal/5' : 'border-gray-200 hover:border-gray-300'}`}>
                             <span className="font-semibold text-gray-800">+ {ao.name}</span>
